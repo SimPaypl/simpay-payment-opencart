@@ -1,0 +1,7 @@
+{
+  "name": "SimPay.pl Payments",
+  "description": "Wtyczka do akceptowania Przelewów Online / BLIK w Simpay.pl",
+  "version": "1.0",
+  "author": "Payments Solution Sp. z o.o.",
+  "link": "https://simpay.pl/dla-developerow/integracje/opencart"
+}
