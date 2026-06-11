@@ -2,13 +2,22 @@
 
 namespace Opencart\Catalog\Controller\Extension\SimPay\Payment;
 
+use SimPay\SDK\SimPay as SimPaySDK;
+use SimPay\SDK\TransactionBuilder;
+
 class SimPay extends \Opencart\System\Engine\Controller
 {
+    public function __construct(\Opencart\System\Engine\Registry $registry)
+    {
+        parent::__construct($registry);
+        require_once DIR_EXTENSION . 'simpay/vendor/autoload.php';
+    }
+
     public function index(): string
     {
         $this->load->language('extension/simpay/payment/simpay');
 
-        $data['action'] = $this->url->link('extension/simpay/payment/simpay|checkout', '', true);
+        $data['action'] = $this->url->link('extension/simpay/payment/simpay|checkout', 'language=' . $this->config->get('config_language'), true);
         $data['message'] = $this->language->get('simpay_pay');
 
         return $this->load->view('extension/simpay/payment/simpay', $data);
@@ -17,65 +26,53 @@ class SimPay extends \Opencart\System\Engine\Controller
     public function checkout(): void
     {
         $this->load->model('checkout/order');
-        $this->load->model('extension/simpay/payment/simpay');
 
         $order_id = $this->session->data['order_id'];
 
         if (empty($order_id)) {
-            $this->response->redirect($this->url->link('checkout/cart', '', true));
+            $this->response->redirect($this->url->link('checkout/cart', 'language=' . $this->config->get('config_language'), true));
         }
 
         $order_info = $this->model_checkout_order->getOrder($order_id);
-        $payload = array(
-            'amount' => (float)$order_info['total'],
-            'currency' => $order_info['currency_code'],
-            'description' => 'Zamówienie #' . $order_info['order_id'] . ' - ' . $order_info['store_name'],
-            'control' => (string)$order_info['order_id'],
-            'customer' => array(
-                'name' => substr($order_info['firstname'] . ' ' . $order_info['lastname'], 0, 64),
-                'email' => $order_info['email'],
-            ),
-            'antifraud' => array(
-                'systemId' => !empty($order_info['customer_id']) ? $order_info['customer_id'] : null,
-            ),
-            'returns' => array(
-                'success' => $this->url->link('checkout/success'),
-                'failure' => $this->url->link('checkout/failure'),
-            ),
-        );
 
         $bearer = $this->config->get('payment_simpay_bearer');
         $serviceId = $this->config->get('payment_simpay_service_id');
+        $serviceHash = $this->config->get('payment_simpay_service_hash');
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, sprintf('https://api.simpay.pl/payment/%s/transactions', $serviceId));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            'Authorization: Bearer ' . $bearer,
-            'Content-Type: application/json',
-            'Accept: application/json',
-            'X-SIM-PLATFORM: opencart',
-            'X-SIM-PLATFORM-VERSION: ' . VERSION,
-        ));
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        $successUrl = $this->url->link('checkout/success', 'language=' . $this->config->get('config_language'), true);
+        $failureUrl = $this->url->link('checkout/failure', 'language=' . $this->config->get('config_language'), true);
 
-        $response = curl_exec($ch);
+        try {
+            $simpay = new SimPaySDK(
+                $bearer,
+                $serviceId,
+                $serviceHash,
+                'opencart',
+                defined('VERSION') ? VERSION : '4.x'
+            );
 
-        if (curl_errno($ch)) {
-            echo '<h3 style="color:red;">Wystąpił błąd podczas generowania płatności [SIMPAY001].</h3><h4>' . curl_error($ch) . ' ' . $response . '</p>';
-            die();
+            $payload = TransactionBuilder::create()
+                ->setAmount((float) $order_info['total'], $order_info['currency_code'])
+                ->setDescription('Zamówienie #' . $order_info['order_id'] . ' - ' . $order_info['store_name'])
+                ->setControl((string) $order_info['order_id'])
+                ->setCustomer(
+                    trim($order_info['firstname'] . ' ' . $order_info['lastname']),
+                    $order_info['email']
+                )
+                ->setAntifraud(!empty($order_info['customer_id']) ? (string) $order_info['customer_id'] : null)
+                ->setReturnUrls($successUrl, $failureUrl)
+                ->toArray();
+
+            $response = $simpay->client()->createTransaction($payload);
+
+            if (isset($response['data']['redirectUrl'])) {
+                $this->response->redirect($response['data']['redirectUrl']);
+            } else {
+                throw new \Exception('SimPay missing redirectUrl in response');
+            }
+        } catch (\Exception $e) {
+            $this->log->write('SimPay Error: ' . $e->getMessage());
+            $this->response->redirect($this->url->link('checkout/failure', 'language=' . $this->config->get('config_language'), true));
         }
-
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        if ((int)$httpCode < 200 || $httpCode >= 300) {
-            echo '<h3 style="color:red;">Wystąpił błąd podczas generowania płatności [SIMPAY002].</h3><h4>' . $httpCode . ' ' . $response . '</p>';
-            die();
-        }
-
-        $json = json_decode($response, true);
-        curl_close($ch);
-
-        $this->response->redirect($json['data']['redirectUrl']);
     }
 }

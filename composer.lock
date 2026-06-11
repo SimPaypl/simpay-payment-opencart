@@ -1,0 +1,74 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "eec2b47ecd115a024f94506326f550aa",
+    "packages": [
+        {
+            "name": "simpay/ecommerce",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/SimPaypl/simpay-ecommerce.git",
+                "reference": "96e61eefb32bea1b225b43d8147919ae327c7cb8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/SimPaypl/simpay-ecommerce/zipball/96e61eefb32bea1b225b43d8147919ae327c7cb8",
+                "reference": "96e61eefb32bea1b225b43d8147919ae327c7cb8",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "php": ">=8.1"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^10.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "SimPay\\SDK\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "SimPay",
+                    "homepage": "https://simpay.pl"
+                }
+            ],
+            "description": "PHP SDK for integrating SimPay payments into e-commerce platforms",
+            "homepage": "https://github.com/SimPaypl/simpay-ecommerce",
+            "keywords": [
+                "ecommerce",
+                "gateway",
+                "payments",
+                "php-sdk",
+                "simpay"
+            ],
+            "support": {
+                "issues": "https://github.com/SimPaypl/simpay-ecommerce/issues",
+                "source": "https://github.com/SimPaypl/simpay-ecommerce/tree/main"
+            },
+            "time": "2026-06-09T17:27:21+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "dev",
+    "stability-flags": {},
+    "prefer-stable": true,
+    "prefer-lowest": false,
+    "platform": {},
+    "platform-dev": {},
+    "plugin-api-version": "2.9.0"
+}

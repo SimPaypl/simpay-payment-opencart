@@ -2,118 +2,102 @@
 
 namespace Opencart\Catalog\Controller\Extension\SimPay\Payment;
 
+use SimPay\SDK\SimPay as SimPaySDK;
+use SimPay\SDK\AmountVerifier;
+use SimPay\SDK\Exception\IpnException;
+use SimPay\SDK\Exception\IpNotAllowedException;
+
 class SimPayWebhook extends \Opencart\System\Engine\Controller
 {
-	public function index()
+	public function __construct(\Opencart\System\Engine\Registry $registry)
 	{
-		$this->load->model('setting/setting');
-		$this->load->model('extension/simpay/payment/simpay');
+		parent::__construct($registry);
+		require_once DIR_EXTENSION . 'simpay/vendor/autoload.php';
+	}
 
-		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+	public function index(): void
+	{
+		if ($this->request->server['REQUEST_METHOD'] !== 'POST') {
 			$this->ipn_error('Method not allowed');
 		}
 
-		$payload = json_decode(@file_get_contents('php://input'), true);
+		$payload = json_decode(file_get_contents('php://input'), true);
 		if (empty($payload)) {
-			$this->ipn_error('cannot read payload');
+			$this->ipn_error('Cannot read payload');
 		}
 
-		if (empty($payload['id']) ||
-			empty($payload['service_id']) ||
-			empty($payload['status']) ||
-			empty($payload['amount']['value']) ||
-			empty($payload['amount']['currency']) ||
-			empty($payload['control']) ||
-			empty($payload['channel']) ||
-			empty($payload['environment']) ||
-			empty($payload['signature'])
-		) {
-			$this->ipn_error('invalid payload');
+        $serviceId = $this->config->get('payment_simpay_service_id');
+        $serviceHash = $this->config->get('payment_simpay_service_hash');
+        $bearer = $this->config->get('payment_simpay_bearer');
+
+        $userAgent = $this->request->server['HTTP_USER_AGENT'] ?? null;
+        $remoteIp = $this->request->server['REMOTE_ADDR'] ?? null;
+
+        try {
+            $simpay = new SimPaySDK(
+                $bearer,
+                $serviceId,
+                $serviceHash,
+                'opencart',
+                defined('VERSION') ? VERSION : '4.x'
+            );
+
+            $ipn = $simpay->handleIpn($payload, $userAgent, $remoteIp);
+        } catch (IpNotAllowedException $e) {
+            $this->log->write('IPN IP Error: ' . $e->getMessage());
+            $this->ipn_error($e->getMessage());
+        } catch (IpnException $e) {
+            $this->log->write('IPN Error: ' . $e->getMessage());
+            $this->ipn_error($e->getMessage());
+        }
+
+		if (!$ipn->isPaid()) {
+			http_response_code(200);
+			exit('OK');
 		}
 
-		$signature = $this->calculate_signature($payload, $this->config->get('payment_simpay_service_hash'));
-		if (!hash_equals($signature, $payload['signature'])) {
-			$this->ipn_error('invalid signature');
-		}
-
-		if ($payload['service_id'] !== $this->config->get('payment_simpay_service_id')) {
-			$this->ipn_error('invalid service_id');
-		}
-
-		if ($payload['status'] !== 'transaction_paid') {
-			header('Content-Type: text/plain', true, 200);
-			echo 'OK';
-			die();
-		}
-
-		$order_id = (int)$payload['control'];
+		$order_id = (int) $ipn->getControl();
 		$this->load->model('checkout/order');
-
 		$order_info = $this->model_checkout_order->getOrder($order_id);
 
 		if (!$order_info) {
-			$this->ipn_error('order not found');
+			$this->ipn_error('Order not found');
 		}
 
-		$price = (float)$order_info['total'];
-		$priceSim = $payload['amount']['value'];
+		$orderTotal = (float) $order_info['total'];
+		$paidAmount = $ipn->getEffectiveAmount($order_info['currency_code']);
 
 		if ($order_info['currency_code'] !== 'PLN') {
-			if (empty($payload['originalAmount']['currency']) || empty($payload['originalAmount']['value'])) {
+			if ($ipn->getOriginalCurrency() === null || $ipn->getOriginalAmount() === null) {
 				$this->ipn_error('originalAmount currency or value is missing');
 			}
 
-			$priceSim = (float)$payload['originalAmount']['value'];
-
-			if ($order_info['currency_code'] !== $payload['originalAmount']['currency']) {
+			if ($order_info['currency_code'] !== $ipn->getOriginalCurrency()) {
 				$this->ipn_error('originalAmount currency mismatch');
 			}
 		}
 
-		if ($this->floatLessThan($price, $priceSim)) {
-			$this->ipn_error('paid price is smaller than order price: ' . $price . ';' . $priceSim);
+		if (!AmountVerifier::isAmountSufficient($orderTotal, $paidAmount)) {
+            $err = 'Paid price is smaller than order price: ' . $orderTotal . ';' . $paidAmount;
+            $this->log->write('IPN Warning: ' . $err);
+			$this->ipn_error($err);
 		}
 
-		$comment = sprintf('SimPay ID: %s' , $payload['id']);
-		$this->model_checkout_order->addHistory($order_id, $this->config->get('payment_simpay_approved_status_id'), $comment);
-		http_response_code(200);
+		$comment = sprintf('SimPay ID: %s', $ipn->getTransactionId());
+		$this->model_checkout_order->addHistory($order_id, (int)$this->config->get('payment_simpay_approved_status_id'), $comment, true);
+
+        $this->log->write("SimPay IPN processed successfully for order ID: $order_id, TX: {$ipn->getTransactionId()}");
+
+        http_response_code(200);
 		exit('OK');
 	}
 
-	private function ipn_error(string $message)
+	private function ipn_error(string $message): void
 	{
 		if (!headers_sent()) {
 			http_response_code(400);
 		}
-
 		echo $message;
 		die();
-	}
-
-	private function calculate_signature($payload, $serviceHash)
-	{
-		unset($payload['signature']);
-
-		$data = $this->ipn_flatten_array($payload);
-		$data[] = $serviceHash;
-
-		return hash('sha256', implode('|', $data));
-	}
-
-	private function ipn_flatten_array(array $array): array
-	{
-		$return = array();
-
-		array_walk_recursive($array, function ($a) use (&$return) {
-			$return[] = $a;
-		});
-
-		return $return;
-	}
-
-	private function floatLessThan(float $a, float $b, float $epsilon = 0.00001): bool
-	{
-		// $a < $b
-		return ($b - $a) > $epsilon;
 	}
 }

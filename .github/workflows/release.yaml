@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Composer dependencies
+        uses: php-actions/composer@v6
+        with:
+          args: --no-dev --optimize-autoloader --no-interaction
+
+      - name: Prepare zip package
+        run: |
+          set -e
+          ZIP="simpay.ocmod.zip"
+          zip -r "${ZIP}" admin catalog vendor install.json
+          [ -f "README.md" ] && zip "${ZIP}" README.md
+          [ -f "LICENSE" ] && zip "${ZIP}" LICENSE
+          sha256sum "${ZIP}"
+
+      - name: Create GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: "${{ github.ref_name }}"
+          name: "${{ github.ref_name }}"
+          generateReleaseNotes: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: |
+            simpay.ocmod.zip

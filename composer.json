@@ -1,0 +1,11 @@
+{
+    "name": "simpay/opencart",
+    "description": "SimPay OpenCart Payment Module",
+    "type": "opencart-extension",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "simpay/ecommerce": "*"
+    }
+}
+

@@ -1,69 +1,117 @@
-{{ header }}
-{{ column_left }}
-
-<div class="container mt-3">
-  <h1>{{ heading_title }}</h1>
-
-  <form action="{{ action }}" method="post">
-
-    <div class="alert alert-info">
-      {{ simpay_ipn_text }}<br>
-      <b><u>{{ webhook_url }}</u></b>
-    </div>
-
-    {% if simpay_version_actual %}
-      <div class="alert alert-success">
-        {{ simpay_version_message }}
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-payment" data-bs-toggle="tooltip" title="{{ simpay_save }}" class="btn btn-primary"><i class="fa-solid fa-save"></i></button>
+        <a href="{{ cancel }}" data-bs-toggle="tooltip" title="Back" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
       </div>
-    {% else %}
-      <div class="alert alert-warning">
-        {{ simpay_version_message }}
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ cancel }}">{{ simpay_extension }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ action }}">{{ heading_title }}</a></li>
+      </ol>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ simpay_text_edit }}</div>
+      <div class="card-body">
+        <form id="form-payment" action="{{ action }}" method="post" data-oc-toggle="ajax">
+
+          <div class="alert alert-info">
+            {{ simpay_ipn_text }}<br>
+            <div class="input-group mt-2">
+              <input type="text" class="form-control" id="simpay-webhook-url" value="{{ webhook_url }}" readonly>
+              <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('simpay-webhook-url').value)" title="Copy"><i class="fa-solid fa-copy"></i></button>
+            </div>
+          </div>
+
+          {% if simpay_version_actual %}
+            <div class="alert alert-success">
+              {{ simpay_version_message }}
+            </div>
+          {% else %}
+            <div class="alert alert-warning">
+              {{ simpay_version_message }}
+            </div>
+          {% endif %}
+
+          {% if error_warning %}
+            <div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> {{ error_warning }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endif %}
+
+          <div class="row mb-3">
+            <label for="input-bearer" class="col-sm-2 col-form-label">{{ simpay_entry_bearer }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="payment_simpay_bearer" value="{{ payment_simpay_bearer }}" placeholder="{{ simpay_entry_bearer }}" id="input-bearer" class="form-control" />
+              <div class="form-text">{{ simpay_entry_bearer_description }}</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-service-id" class="col-sm-2 col-form-label">{{ simpay_entry_service_id }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="payment_simpay_service_id" value="{{ payment_simpay_service_id }}" placeholder="{{ simpay_entry_service_id }}" id="input-service-id" class="form-control" />
+              <div class="form-text">{{ simpay_entry_service_id_description }}</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-service-hash" class="col-sm-2 col-form-label">{{ simpay_entry_service_hash }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="payment_simpay_service_hash" value="{{ payment_simpay_service_hash }}" placeholder="{{ simpay_entry_service_hash }}" id="input-service-hash" class="form-control" />
+              <div class="form-text">{{ simpay_entry_service_hash_description }}</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-ip-verify" class="col-sm-2 col-form-label">{{ simpay_entry_ip_verify }}</label>
+            <div class="col-sm-10">
+              <select name="payment_simpay_ip_verify" id="input-ip-verify" class="form-select">
+                <option value="0"{% if not payment_simpay_ip_verify %} selected{% endif %}>{{ simpay_disabled }}</option>
+                <option value="1"{% if payment_simpay_ip_verify %} selected{% endif %}>{{ simpay_enabled }}</option>
+              </select>
+              <div class="form-text">{{ simpay_entry_ip_verify_description }}</div>
+            </div>
+          </div>
+
+
+          <div class="row mb-3">
+            <label for="input-approved-status" class="col-sm-2 col-form-label">{{ simpay_entry_approved_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_simpay_approved_status_id" id="input-approved-status" class="form-select">
+                {% for order_status in order_statuses %}
+                  <option value="{{ order_status.order_status_id }}"{% if order_status.order_status_id == payment_simpay_approved_status_id %} selected{% endif %}>{{ order_status.name }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">{{ simpay_entry_approved_status_description }}</div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-sort-order" class="col-sm-2 col-form-label">{{ simpay_entry_sort_order }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="payment_simpay_sort_order" value="{{ payment_simpay_sort_order }}" placeholder="{{ simpay_entry_sort_order }}" id="input-sort-order" class="form-control" />
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <label for="input-status" class="col-sm-2 col-form-label">{{ simpay_entry_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_simpay_status" id="input-status" class="form-select">
+                <option value="1"{% if payment_simpay_status %} selected{% endif %}>{{ simpay_enabled }}</option>
+                <option value="0"{% if not payment_simpay_status %} selected{% endif %}>{{ simpay_disabled }}</option>
+              </select>
+            </div>
+          </div>
+
+        </form>
       </div>
-    {% endif %}
-
-    {% if error_warning %}
-      <div class="alert alert-danger">
-        {{ error_warning }}
-      </div>
-    {% endif %}
-
-    <div class="form-group mb-3">
-      <label>{{ simpay_entry_bearer }}</label>
-      <input type="text" name="payment_simpay_bearer" value="{{ payment_simpay_bearer }}" class="form-control" />
-      <small>{{ simpay_entry_bearer_description }}</small>
     </div>
-
-    <div class="form-group mb-3">
-      <label>{{ simpay_entry_service_id }}</label>
-      <input type="text" name="payment_simpay_service_id" value="{{ payment_simpay_service_id }}" class="form-control" />
-      <small>{{ simpay_entry_service_id_description }}</small>
-    </div>
-
-    <div class="form-group mb-3">
-      <label>{{ simpay_entry_service_hash }}</label>
-      <input type="text" name="payment_simpay_service_hash" value="{{ payment_simpay_service_hash }}" class="form-control" />
-      <small>{{ simpay_entry_service_hash_description }}</small>
-    </div>
-
-    <div class="form-group mb-3">
-      <label>{{ payment_simpay_approved_status }}</label>
-      <select name="payment_simpay_approved_status_id" id="input-approved-status" class="form-select">
-        {% for order_status in order_statuses %}
-          <option value="{{ order_status.order_status_id }}"{% if order_status.order_status_id == payment_simpay_approved_status_id %} selected{% endif %}>{{ order_status.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="form-group mb-3">
-      <label>{{ simpay_entry_status }}</label>
-      <select name="payment_simpay_status" class="form-control">
-        <option value="1" {% if payment_simpay_status %} selected {% endif %}>{{ simpay_enabled }}</option>
-        <option value="0" {% if not payment_simpay_status %} selected {% endif %}>{{ simpay_disabled }}</option>
-      </select>
-    </div>
-
-    <button type="submit" class="btn btn-primary">{{ simpay_save }}</button>
-  </form>
+  </div>
 </div>
 
 {{ footer }}
