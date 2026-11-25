@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install Composer dependencies
-        uses: php-actions/composer@v6
+        uses: php-actions/composer@8a65f0d3c6a1d17ca4800491a40b5756a4c164f3 # v6.1.2
         with:
           args: --no-dev --optimize-autoloader --no-interaction
 
@@ -30,7 +30,7 @@ jobs:
           sha256sum "${ZIP}"
 
       - name: Create GitHub release
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           tag: "${{ github.ref_name }}"
           name: "${{ github.ref_name }}"
