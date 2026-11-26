@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "eec2b47ecd115a024f94506326f550aa",
+    "content-hash": "6af5c84e20abe6815068e06425ccd4fd",
     "packages": [
         {
             "name": "simpay/ecommerce",
-            "version": "dev-main",
+            "version": "1.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/SimPaypl/simpay-ecommerce.git",
-                "reference": "96e61eefb32bea1b225b43d8147919ae327c7cb8"
+                "reference": "9f87db62fbcd9bd2b6a98b6026a43d36d959a697"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/SimPaypl/simpay-ecommerce/zipball/96e61eefb32bea1b225b43d8147919ae327c7cb8",
-                "reference": "96e61eefb32bea1b225b43d8147919ae327c7cb8",
+                "url": "https://api.github.com/repos/SimPaypl/simpay-ecommerce/zipball/9f87db62fbcd9bd2b6a98b6026a43d36d959a697",
+                "reference": "9f87db62fbcd9bd2b6a98b6026a43d36d959a697",
                 "shasum": ""
             },
             "require": {
@@ -29,7 +29,6 @@
                 "phpstan/phpstan": "^1.10",
                 "phpunit/phpunit": "^10.0"
             },
-            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -57,18 +56,23 @@
             ],
             "support": {
                 "issues": "https://github.com/SimPaypl/simpay-ecommerce/issues",
-                "source": "https://github.com/SimPaypl/simpay-ecommerce/tree/main"
+                "source": "https://github.com/SimPaypl/simpay-ecommerce/tree/1.1.1"
             },
-            "time": "2026-06-09T17:27:21+00:00"
+            "time": "2026-11-19T20:49:04+00:00"
         }
     ],
     "packages-dev": [],
     "aliases": [],
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "stability-flags": {},
-    "prefer-stable": true,
+    "prefer-stable": false,
     "prefer-lowest": false,
-    "platform": {},
+    "platform": {
+        "php": ">=8.1"
+    },
     "platform-dev": {},
+    "platform-overrides": {
+        "php": "8.1"
+    },
     "plugin-api-version": "2.9.0"
 }

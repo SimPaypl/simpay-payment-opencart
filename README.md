@@ -34,7 +34,9 @@ Moduł dodaje do OpenCart 4 obsługę płatności SimPay oraz umożliwia m.in.:
 
 - Minimalna wersja OpenCart: **4.0.0.0**
 - PHP: zgodne z wymaganiami Twojej wersji OpenCart (zalecane PHP 8.0+)
-- Dostęp do panelu SimPay w celu pobrania danych integracyjnych (Service ID, Bearer Token, IPN Signature Hash).
+- PHP **8.1+** (wymagane przez SDK `simpay/ecommerce`)
+- Konto w Panelu SimPay z aktywną usługą płatności (IPN w wersji 2.0)
+- Do opcji **Połącz z SimPay** sklep musi działać po **HTTPS**
 
 > **Uwaga dotycząca bezpieczeństwa oraz kompatybilności**  
 > Moduł **SimPay został napisany i zoptymalizowany wyłącznie dla OpenCart 4.x**.  
@@ -67,8 +69,21 @@ Moduł dodaje do OpenCart 4 obsługę płatności SimPay oraz umożliwia m.in.:
 
 ## Konfiguracja
 
-W konfiguracji modułu przejdź do zakładki **Rozszerzenia** (Payments), odszukaj SimPay i kliknij ikonę ołówka (Edytuj).  
-Uzupełnij odpowiednie dane powiązane z usługą SimPay:
+W konfiguracji modułu przejdź do zakładki **Rozszerzenia** (Payments), odszukaj SimPay i kliknij ikonę ołówka (Edytuj).
+
+### Połącz z SimPay (zalecane)
+
+1. Na zakładce **Połącz z SimPay** kliknij **Połącz z SimPay**.
+2. Zaloguj się w Panelu SimPay i udziel dostępu.
+3. Wybierz usługę płatności i kliknij **Połącz wybraną usługę**.
+
+Moduł automatycznie utworzy klucz API, ustawi adres IPN i wygeneruje nowy klucz sygnatury IPN — bez ręcznego kopiowania danych.
+
+> ⚠️ Połączenie generuje nowy klucz sygnatury IPN dla wybranej usługi — poprzedni przestaje działać od razu. Jeśli ta sama usługa jest używana w innym sklepie, zaktualizuj go również tam.
+
+### Ręczne wpisanie danych
+
+Na zakładce **Wpisz dane ręcznie** uzupełnij dane powiązane z usługą SimPay:
 
 - **Hasło / Bearer Token** – Z zakładki Konto Klienta > API w Panelu SimPay.
 - **ID usługi** – Z zakładki Płatności online > Usługi w Panelu SimPay.

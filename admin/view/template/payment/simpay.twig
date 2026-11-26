@@ -14,18 +14,50 @@
     </div>
   </div>
   <div class="container-fluid">
+
+    {% if flash %}
+      <div class="alert alert-{{ flash.type }} alert-dismissible">
+        <i class="fa-solid {{ flash.type == 'success' ? 'fa-circle-check' : 'fa-circle-exclamation' }}"></i> {{ flash.text }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endif %}
+
+    {% if oauth.pending %}
+      <form method="post" action="{{ oauth.provision_url }}" class="card mb-3 border-primary" id="simpay-oauth-select">
+        <div class="card-header"><i class="fa-solid fa-link"></i> {{ simpay_oauth_select_title }}</div>
+        <div class="card-body">
+          {% if oauth.pending.email %}
+            <p>{{ simpay_oauth_account }} <strong>{{ oauth.pending.email }}</strong></p>
+          {% endif %}
+
+          <p>{{ simpay_oauth_select_lead }}</p>
+
+          {% for service in oauth.pending.services %}
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="service_id" id="simpay-service-{{ service.id }}" value="{{ service.id }}"{% if service.id == oauth.pending.suggested_service_id %} checked{% endif %} required>
+              <label class="form-check-label" for="simpay-service-{{ service.id }}">
+                <strong>{{ service.name ?: service.id }}</strong>
+                <span class="text-muted">&middot; ID: {{ service.id }}{% if service.url %} &middot; {{ service.url }}{% endif %}</span>
+              </label>
+            </div>
+          {% endfor %}
+
+          <div class="alert alert-warning mt-3 mb-0">{{ simpay_oauth_select_warning }}</div>
+        </div>
+        <div class="card-footer text-end">
+          <a href="{{ oauth.cancel_url }}" class="btn btn-outline-secondary me-2">{{ simpay_oauth_cancel }}</a>
+          <button type="submit" class="btn btn-primary">{{ simpay_oauth_select_submit }}</button>
+        </div>
+      </form>
+    {% endif %}
+
+    {# Separate form - forms cannot be nested; the button inside the config form targets it via the form="" attribute #}
+    <form method="post" action="{{ oauth.disconnect_url }}" id="simpay-oauth-disconnect" class="d-none"></form>
+
     <div class="card">
       <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ simpay_text_edit }}</div>
       <div class="card-body">
         <form id="form-payment" action="{{ action }}" method="post" data-oc-toggle="ajax">
-
-          <div class="alert alert-info">
-            {{ simpay_ipn_text }}<br>
-            <div class="input-group mt-2">
-              <input type="text" class="form-control" id="simpay-webhook-url" value="{{ webhook_url }}" readonly>
-              <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('simpay-webhook-url').value)" title="Copy"><i class="fa-solid fa-copy"></i></button>
-            </div>
-          </div>
 
           {% if simpay_version_actual %}
             <div class="alert alert-success">
@@ -43,29 +75,91 @@
             </div>
           {% endif %}
 
-          <div class="row mb-3">
-            <label for="input-bearer" class="col-sm-2 col-form-label">{{ simpay_entry_bearer }}</label>
-            <div class="col-sm-10">
-              <input type="text" name="payment_simpay_bearer" value="{{ payment_simpay_bearer }}" placeholder="{{ simpay_entry_bearer }}" id="input-bearer" class="form-control" />
-              <div class="form-text">{{ simpay_entry_bearer_description }}</div>
+          <input type="hidden" name="payment_simpay_auth_method" id="input-auth-method" value="{{ payment_simpay_auth_method }}">
+
+          <ul class="nav nav-pills justify-content-center mb-4" id="simpay-auth-tabs">
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-simpay-auth="oauth"><i class="fa-solid fa-bolt"></i> {{ simpay_oauth_tab }}</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-simpay-auth="manual"><i class="fa-solid fa-keyboard"></i> {{ simpay_manual_tab }}</a>
+            </li>
+          </ul>
+
+          <div class="d-none mx-auto text-center mb-4" style="max-width: 640px;" data-simpay-auth-panel="oauth">
+            {% if oauth.connected %}
+              <div class="border border-success rounded p-4 mb-4 bg-success-subtle">
+                <i class="fa-solid fa-circle-check fa-2x text-success mb-2"></i>
+                <p class="fw-bold mb-3">{{ simpay_oauth_connected_title }}</p>
+                <dl class="row mb-0 text-start">
+                  {% if oauth.account_email %}
+                    <dt class="col-5 text-end fw-normal text-muted">{{ simpay_oauth_account }}</dt>
+                    <dd class="col-7 fw-bold mb-1">{{ oauth.account_email }}</dd>
+                  {% endif %}
+                  <dt class="col-5 text-end fw-normal text-muted">{{ simpay_oauth_service }}</dt>
+                  <dd class="col-7 fw-bold mb-0">{{ oauth.service_name ?: oauth.service_id }} <span class="text-muted fw-normal">(ID: {{ oauth.service_id }})</span></dd>
+                </dl>
+              </div>
+            {% else %}
+              <p class="text-muted mb-4">{{ simpay_oauth_lead }}</p>
+            {% endif %}
+
+            {% if not oauth.https_ok %}
+              <div class="alert alert-warning text-start">
+                {{ simpay_oauth_error_https }}<br>
+                <small class="text-muted">{{ simpay_oauth_detected_callback }} <code>{{ oauth.redirect_uri }}</code></small>
+              </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-center gap-2">
+              {% if oauth.https_ok %}
+                <a href="{{ oauth.connect_url }}" class="btn {{ oauth.connected ? 'btn-outline-primary' : 'btn-primary btn-lg' }}">
+                  <i class="fa-solid fa-link"></i> {{ oauth.connected ? simpay_oauth_reconnect : simpay_oauth_connect }}
+                </a>
+              {% endif %}
+              {% if oauth.connected %}
+                <button type="submit" form="simpay-oauth-disconnect" class="btn btn-outline-danger" onclick="return confirm('{{ simpay_oauth_disconnect_confirm|e('js') }}');">
+                  <i class="fa-solid fa-link-slash"></i> {{ simpay_oauth_disconnect }}
+                </button>
+              {% endif %}
             </div>
           </div>
 
-          <div class="row mb-3">
-            <label for="input-service-id" class="col-sm-2 col-form-label">{{ simpay_entry_service_id }}</label>
-            <div class="col-sm-10">
-              <input type="text" name="payment_simpay_service_id" value="{{ payment_simpay_service_id }}" placeholder="{{ simpay_entry_service_id }}" id="input-service-id" class="form-control" />
-              <div class="form-text">{{ simpay_entry_service_id_description }}</div>
+          <div class="d-none" data-simpay-auth-panel="manual">
+            <div class="alert alert-info">
+              {{ simpay_ipn_text }}<br>
+              <div class="input-group mt-2">
+                <input type="text" class="form-control" id="simpay-webhook-url" value="{{ webhook_url }}" readonly>
+                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('simpay-webhook-url').value)" title="Copy"><i class="fa-solid fa-copy"></i></button>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <label for="input-bearer" class="col-sm-2 col-form-label">{{ simpay_entry_bearer }}</label>
+              <div class="col-sm-10">
+                <input type="text" name="payment_simpay_bearer" value="{{ payment_simpay_bearer }}" placeholder="{{ simpay_entry_bearer }}" id="input-bearer" class="form-control" />
+                <div class="form-text">{{ simpay_entry_bearer_description }}</div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <label for="input-service-id" class="col-sm-2 col-form-label">{{ simpay_entry_service_id }}</label>
+              <div class="col-sm-10">
+                <input type="text" name="payment_simpay_service_id" value="{{ payment_simpay_service_id }}" placeholder="{{ simpay_entry_service_id }}" id="input-service-id" class="form-control" />
+                <div class="form-text">{{ simpay_entry_service_id_description }}</div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <label for="input-service-hash" class="col-sm-2 col-form-label">{{ simpay_entry_service_hash }}</label>
+              <div class="col-sm-10">
+                <input type="text" name="payment_simpay_service_hash" value="{{ payment_simpay_service_hash }}" placeholder="{{ simpay_entry_service_hash }}" id="input-service-hash" class="form-control" />
+                <div class="form-text">{{ simpay_entry_service_hash_description }}</div>
+              </div>
             </div>
           </div>
 
-          <div class="row mb-3">
-            <label for="input-service-hash" class="col-sm-2 col-form-label">{{ simpay_entry_service_hash }}</label>
-            <div class="col-sm-10">
-              <input type="text" name="payment_simpay_service_hash" value="{{ payment_simpay_service_hash }}" placeholder="{{ simpay_entry_service_hash }}" id="input-service-hash" class="form-control" />
-              <div class="form-text">{{ simpay_entry_service_hash_description }}</div>
-            </div>
-          </div>
+          <hr class="my-4">
 
           <div class="row mb-3">
             <label for="input-ip-verify" class="col-sm-2 col-form-label">{{ simpay_entry_ip_verify }}</label>
@@ -77,7 +171,6 @@
               <div class="form-text">{{ simpay_entry_ip_verify_description }}</div>
             </div>
           </div>
-
 
           <div class="row mb-3">
             <label for="input-approved-status" class="col-sm-2 col-form-label">{{ simpay_entry_approved_status }}</label>
@@ -113,5 +206,30 @@
     </div>
   </div>
 </div>
+<script type="text/javascript"><!--
+(function () {
+    var input = document.getElementById('input-auth-method');
+    var tabs = document.querySelectorAll('#simpay-auth-tabs [data-simpay-auth]');
+    var panels = document.querySelectorAll('[data-simpay-auth-panel]');
 
+    function show(method) {
+        tabs.forEach(function (tab) {
+            tab.classList.toggle('active', tab.getAttribute('data-simpay-auth') === method);
+        });
+        panels.forEach(function (panel) {
+            panel.classList.toggle('d-none', panel.getAttribute('data-simpay-auth-panel') !== method);
+        });
+        input.value = method;
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function (e) {
+            e.preventDefault();
+            show(tab.getAttribute('data-simpay-auth'));
+        });
+    });
+
+    show(input.value === 'manual' ? 'manual' : 'oauth');
+})();
+//--></script>
 {{ footer }}
